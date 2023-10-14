@@ -1,0 +1,91 @@
+Section 1 - First things first
+===============================
+Introduction
+-------------
+Helps you enrich your JUnit tests with Mocks.
+
+JUnit 5 + mockito 3. (Up-to date course).
+
+Project managed by Maven.
+
+
+Mocking Theory
+---------------
+Unit tests are written for single software parts. Typically one unit test in Java verifies one class method.
+
+Java classes that have no dependencies are easy to test. They are simple classes that don't use databases, internet clients or any kind of logic from other Java classes.
+
+As you work on bigger projects you may find that things get a bit more complicated. Classes have dependencies, and those classes may have dependencies themselves. That's because when we write good object-oriented software in Java, we should typically follow the SINGLE RESPONSIBILITY PRINCIPLE:
+
+	- Each Java class should only do one thing.
+
+In other words, it should only have responsibility over a single feature.
+
+Example then of the HoroscopeService. See image.
+
+How do we write unit tests for this HoroscopeService class that relies on two other objects of classes UserDatabase and HoroscopeProvider?
+
+One way:
+
+@BeforeAll
+void setup() {
+	this.horoscopeService = new HoroscopeService(new UserDatabase(), new HoroscopeProvider());
+}
+
+UserDatabase connects to a database. HoroscopeProvider checks horoscope on a website. This means that our test which was supposed to be a unit test focusing on the HoroscopeService class is no longer a Unit Test because under the hood it will also connect to a real database and will also look up a horoscope on a website available on the internet.
+
+Test will fail if we don't have database installed or we don't have internet connection. But it will fail for the wrong reason. Not because the class under test HoroscopeService works incorrectly, but because one of it's dependencies has a problem.
+
+This could be fine for an Integration test, but we don't want such situations in a Unit Test.
+
+When we write Unit Tests for HoroscopeService, we want the tests to fail when and only when the HoroscopeService class contains bugs.
+
+So what can we do to actually test the HoroscopeService class? Can we somehow avoid connecting to a real user database and going online to check the horoscopes?
+
+*** Luckily, we can, instead of using real dependencies, we will use dummy dependencies, also known as mocks. ***
+
+Treat them as fake objects that only pretend to be the dependencies we need!
+
+See image of HoroscopeServiceTestMocks.
+
+@BeforeAll
+void setup() {
+	UserDatabase mockDatabase = mock(UserDatabase.class);
+	HoroscopeProvider mockHoroscopeProvider = mock(HoroscopeProvider.class);
+	this.horoscopeService = new HoroscopeService(mockDatabase, mockHoroscopeProvider);
+}
+
+Instead of using the "new" keyword for creating the dependencies, we used the "mock" method from Mockito to create dummy objects that behave as if they were real objects of type UserDatabase and HoroscopeProvider.
+
+We are going to create mock dependencies, or dummy dependencies, so that we can write real unit tests for classes that have external dependencies.
+
+We'll learn to use such mocks to define their behaviour in various situations and to check if they behave correctly. We'll use the Mockito framework to that end.
+
+
+Mocking Framework
+------------------
+1) Mockito (Most popular)
+2) JMockit
+3) EasyMock
+
+
+Intellij - Project Setup
+-------------------------
+Done.
+
+
+What should be mocked?
+-----------------------
+A beginner video. More advanced users can skip it.
+
+BookingService is class we are going to test. It has 4 dependencies.
+
+We want our tests to be independent of the 4 dependencies and their methods. So they will become mocks in our tests!
+
+Instead of using real methods, we will use mock dummy methods. See diagram.png.
+
+Don't mock the methods from the BookingService class itself. Makes no sense.
+
+
+
+

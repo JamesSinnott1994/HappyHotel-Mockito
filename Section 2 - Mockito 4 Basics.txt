@@ -1,0 +1,96 @@
+Section 2 - Mockito 4 Basics
+=============================
+First Mocks
+------------
+In HappyHotel project, create new test class, "Test01FirstMocks".
+
+Class under test is BookingService. We want to instantiate booking service, but we need to provide the four dependencies of the class. We want don't want to use concrete dependencies as in the case of MailSender the method there is no finished yet annd throws an exception.
+
+Need to add the four fields that correspond to the dependencies:
+
+	private BookingService bookingService;
+	
+    private PaymentService paymentServiceMock;
+    private RoomService roomServiceMock;
+    private BookingDAO bookingDAOMock;
+    private MailSender mailSenderMock;
+
+Then in the setup method, create the mocks. To make things easier for us, add the following static import at the top of the file:
+
+	import static org.mockito.Mockito.*;
+	
+	@BeforeEach
+    void setup() {
+
+        this.paymentServiceMock = mock(PaymentService.class);
+        this.roomServiceMock = mock(RoomService.class);
+        this.bookingDAOMock = mock(BookingDAO.class);
+        this.mailSenderMock = mock(MailSender.class);
+		
+		this.bookingService = new BookingService(paymentServiceMock, roomServiceMock, bookingDAOMock, mailSenderMock);
+    }
+	
+*** The "mock" method, is the basic method in Mockito, which creates a dummy object of the given class. ***
+
+In this case, we get a dummy PaymentService. It will not actually have any of the available functionality in the class but it will pretend to have it! Behind the screen, it doesn't have any of the code or business logic of the payment class.
+
+Now we can instantiate our business class and provide the mocks as dependencies.
+
+Now the BookingService is prepared and contains our mocks.
+
+	@Test
+    void should_CalculateCorrectPrice_When_CorrectInput() {
+
+        // given
+        BookingRequest bookingRequest = new BookingRequest("1", LocalDate.of(2020, 01, 01),
+                LocalDate.of(2020, 01, 05), 2, false);
+        double expected = 4 * 2 * 50.0;
+
+        // when
+        double actual = bookingService.calculatePrice(bookingRequest);
+
+        // then
+        assertEquals(expected, actual);
+
+    }
+
+Note for above, we didn't actually use the mocks, only created them. We only used them to instantiate the BookingService object. "calculatePrice" did not need them.
+
+
+Default Return Values
+----------------------
+
+
+Returning Custom Values
+------------------------
+
+
+Multiple thenReturn Calls
+--------------------------
+
+
+Throwing Exceptions
+--------------------
+
+
+Argument Matchers
+------------------
+
+
+Verifying Behaviour
+---------------------
+
+
+Spies
+------
+
+
+Mocking Void Methods
+---------------------
+
+
+
+
+
+
+
