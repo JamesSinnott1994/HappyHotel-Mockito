@@ -59,6 +59,45 @@ Note for above, we didn't actually use the mocks, only created them. We only use
 
 Default Return Values
 ----------------------
+We will test the following method from the BookingService class:
+
+	public int getAvailablePlaceCount() {
+		return roomService.getAvailableRooms()
+				.stream()
+				.map(room -> room.getCapacity())
+				.reduce(0, Integer::sum);
+	}
+	
+This time we will use a dependency, roomService above.
+
+For this add, a new test class "Test02DefaultReturnValues" by copying the other one "Test01FirstMocks".
+
+We know that roomService is a mock, and doesn't contain any business logic from the orignal class. So what will it return?
+
+*** By default, Mockito returns nice mocks, *** which means return values that actually make some sense.
+
+getAvailableRooms() below. A nice mock for this will return an empty list, sum of all places in an empty list will be 0:
+
+	public List<Room> getAvailableRooms() {
+		return roomAvailability.entrySet().stream()
+				.filter(entry -> entry.getValue())
+				.map(entry -> entry.getKey())
+				.collect(Collectors.toList());
+	}
+	
+Test below passes:
+
+	@Test
+    void should_CountAvailablePlaces() {
+        // given
+        int expected = 0;
+
+        // when
+        int actual = bookingService.getAvailablePlaceCount();
+
+        // then
+        assertEquals(expected, actual);
+    }
 
 
 Returning Custom Values
