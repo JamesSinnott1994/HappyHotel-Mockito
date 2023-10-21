@@ -100,24 +100,178 @@ Test below passes:
     }
 
 
+
 Returning Custom Values
 ------------------------
+Create new test class: "Test03ReturningCustomValues"
+
+Need to teach our roomService mock to return a list with one room when the getAvailableRooms() method is called.
+
+We will use a new mockito method named "when()". In it, provide the method that will be called. With "thenReturn()", specify what should be returned.
+
+Below will return a single element list:
+
+	when(this.roomServiceMock.getAvailableRooms())
+		.thenReturn(Collections.singletonList(new Room("Room 1", 2)));
+		
+Full test method below:
+
+	@Test
+    void should_CountAvailablePlaces_When_OneRoomAvailable() {
+        // given
+        when(this.roomServiceMock.getAvailableRooms())
+                .thenReturn(Collections.singletonList(new Room("Room 1", 5)));
+        int expected = 5;
+
+        // when
+        int actual = bookingService.getAvailablePlaceCount();
+
+        // then
+        assertEquals(expected, actual);
+    }
+	
+Test for multiple rooms available:	
+
+	@Test
+    void should_CountAvailablePlaces_When_MultipleRoomsAvailable() {
+        // given
+        List<Room> rooms = Arrays.asList(new Room("Room 1", 2), new Room("Room 2", 5));
+        when(this.roomServiceMock.getAvailableRooms())
+                .thenReturn(rooms);
+        int expected = 7;
+
+        // when
+        int actual = bookingService.getAvailablePlaceCount();
+
+        // then
+        assertEquals(expected, actual);
+    }
 
 
 Multiple thenReturn Calls
 --------------------------
+For the first time method is called return one value, for the second time return another with multiple thenReturns() methods.
+
+Create new test class "Test04MultipleThenReturnCalls".
+
+	@Test
+    void should_CountAvailablePlaces_When_CalledMultipleTimes() {
+        // given
+        when(this.roomServiceMock.getAvailableRooms())
+                .thenReturn(Collections.singletonList(new Room("Room 1", 5)))
+                .thenReturn(Collections.emptyList());
+        int expectedFirstCall = 5;
+        int expectedSecondCall = 0;
+
+        // when
+        int actualFirst = bookingService.getAvailablePlaceCount();
+        int actualSecond = bookingService.getAvailablePlaceCount();
+
+        // then
+        assertAll(
+                () -> assertEquals(expectedFirstCall, actualFirst),
+                () -> assertEquals(expectedSecondCall, actualSecond)
+        );
+    }
+
 
 
 Throwing Exceptions
 --------------------
+Looking at below method which relies on 4 dependencies:
+
+	public String makeBooking(BookingRequest bookingRequest) {
+		String roomId = roomService.findAvailableRoomId(bookingRequest);
+		double price = calculatePrice(bookingRequest);
+
+		if (bookingRequest.isPrepaid()) {
+			paymentService.pay(bookingRequest, price);
+		}
+
+		bookingRequest.setRoomId(roomId);
+		String bookingId = bookingDAO.save(bookingRequest);
+		roomService.bookRoom(roomId);
+		mailSender.sendBookingConfirmation(bookingId);
+		return bookingId;
+	}
+
+Create new test class, "Test05ThrowingExceptions".
+
+	@Test
+    void should_ThrowException_When_NoRoomAvailable() {
+
+        // given
+        BookingRequest bookingRequest = new BookingRequest("1", LocalDate.of(2020, 01, 01),
+                LocalDate.of(2020, 01, 05), 2, false);
+        when(this.roomServiceMock.findAvailableRoomId(bookingRequest))
+                .thenThrow(BusinessException.class);
+
+        // when
+        Executable executable = () -> bookingService.makeBooking(bookingRequest);
+
+        // then
+        assertThrows(BusinessException.class, executable);
+    }
+
+BusinessException is an exception created for the purposes of the course and extends the RuntimeException class.
+
+Test passes and an exception was thrown correctly.
+
+To sum up, we can throw an exception from a mock using the "when-thenThrow" pattern. Inside the thenThrow() brackets we simply need to provide the type of exception to be thrown.
 
 
 Argument Matchers
 ------------------
+Based on previous test, what if we want to throw an exception no matter which bookingRequest is passed. This is where Mockito Argument Matchers come in handy.
+
+Create a new test class, "Test06Matchers". Import new library:
+
+	import static org.mockito.ArgumentMatchers.*;
+	
+	@Test
+    void should_NotCompleteBooking_When_PriceTooHigh() {
+
+        // given
+        BookingRequest bookingRequest = new BookingRequest("1", LocalDate.of(2020, 01, 01),
+                LocalDate.of(2020, 01, 05), 2, true);
+        when(this.paymentServiceMock.pay(bookingRequest, price))
+                .thenThrow(BusinessException.class);
+
+        // when
+        Executable executable = () -> bookingService.makeBooking(bookingRequest);
+
+        // then
+        assertThrows(BusinessException.class, executable);
+    }
+
+We want paymentServiceMock to throw an exception for any kind of input, any kind of booking request. To that end, Mockito has an argument named "any()". You can provide an argument for any() i.e. BusinessException.class, but you can also leave it empty.
+
+[Any here, for any kind of booking request. Not limited to a specific BookingRequest]
+
+Can't use "any()" for primitive double values for the "price". We need to use primitive specific matchers such as "anyDouble()".
+
+You should see an exception thrown now when you run the test.
+
+If we change the bookingRequest userId to "2" from "1", the test will still pass. That's the magic of mockito's ArgumentMatchers.
+
+Mockito's ArgumentMatchers are not rocket science, but you should remember three things when working with them:
+	1) Use any() for objects, then specific "any" for the other primitives.
+	2) May be tempted to mix matchers with exact values i.e. any booking request does not work above for exact double value of 400.0.
+	
+		a) If we do want to mix them, we can use the "eq" method, short for equals:
+			- when(this.paymentServiceMock.pay(any(), eq(400.0)))
+			
+	3) May find mathcing Strings a bit tricky, even though we have "anyString()
+	
+		a) "anyString()" will NOT match a null String
+		b) For Null Strings, use any(). Matches a null String object.
+
+Follow the three rules and you should be fine working with Mockito ArgumentMatchers.
 
 
 Verifying Behaviour
 ---------------------
+
 
 
 Spies
