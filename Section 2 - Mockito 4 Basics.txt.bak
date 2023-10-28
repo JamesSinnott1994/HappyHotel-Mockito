@@ -343,7 +343,7 @@ Second test, verifiy that pay method isn't called when prepaid is false:
 
 This line verifies that paymentService was never called and the method pay() was never invoked for any kind of input.
 
-*** So to sum up, you can see that verifiy(...) is a very nice method that is often used in the "then" section of Mockito tests and that it verifies whether certain mocks were called or not called as expected. ***
+So to sum up, you can see that verifiy(...) is a very nice method that is often used in the "then" section of Mockito tests and that it verifies whether certain mocks were called or not called as expected.
 
 
 Spies
