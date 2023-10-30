@@ -348,14 +348,162 @@ This line verifies that paymentService was never called and the method pay() was
 
 Spies
 ------
+Also known as "partial mocks".
+
+Create new test class "Test08Spies".
+
+We want to store the bookingId first of all:
+
+	String bookingId = bookingService.makeBooking(bookingRequest);
+	
+Then we want to verify that the bookingDAO mock is used and the save() method is invoked.
+
+	@Test
+    void should_MakeBooking_When_InputOK() {
+
+        // given
+        BookingRequest bookingRequest = new BookingRequest("1", LocalDate.of(2020, 01, 01),
+                LocalDate.of(2020, 01, 05), 2, true);
+        double expected = 4 * 2 * 50.0;
+
+        // when
+        String bookingId = bookingService.makeBooking(bookingRequest);
+
+        // then
+        verify(bookingDAOMock).save(bookingRequest);
+        System.out.println("bookingId=" + bookingId);
+
+    }
+	
+When above is run. The test passes and returns "null" as the BookingDAO is a mock that returns, the default, nice values, so when we ask it to save the object and to return a string ID, the default string that is returned is a null string.
+
+What happens when we change the bookingDAOMock into a spy?
+
+	this.bookingDAOMock = spy(BookingDAO.class);
+	
+Now, we see that the test passes but the string returns an actual bookingId.
+
+*** The difference between mocks and spies is that mocks don't have any logic of the mocked class, and they simply return the default values such as nulls or empty lists, unless we change their behaviour. ***
+
+*** Spies in turn, have all the logic from the mocked class, so they behave just like a normal object of the mocked class unless you modify some of the behaviour. ***
+
+	mock = dummy object with no real logic
+	spy = real object with real logic that we can modify
+	
+In other words, for spies, we call the actual methods from the actual classes.
+
+In case above, we are actually going to use the bookingDAO.save() method.
+
+Now for a new test method:
+
+	@Test
+    void should_CancelBooking_When_InputOK() {
+
+        // given
+        BookingRequest bookingRequest = new BookingRequest("1", LocalDate.of(2020, 01, 01),
+                LocalDate.of(2020, 01, 05), 2, true);
+        bookingRequest.setRoomId("1.3");
+        String bookingId = "1";
+
+        // when
+        bookingService.cancelBooking(bookingId);
+
+        // then
+
+    }
+	
+For above, the test fails with a NullPointerException on this particular line:
+
+	public void cancelBooking(String id) {
+		BookingRequest request = bookingDAO.get(id); // <- Null booking request
+		roomService.unbookRoom(request.getRoomId()); // <- This line
+		bookingDAO.delete(id);
+	}
+
+That's because when we call cancelBooking() and we use a fake booking ID, the bookingDAO, which is not a mock, it is a spy, will try to get the actual booking request. Now, we know that this booking request does not exist, so we will get a null as the booking request here.
+
+So if we try to call the getRoomID() method for the null, we will get a NullPointerException.
+
+So, we know that the bookingDAO spy returns the actual value for the actual booking ID, which is null. We don't want that. We want to change the behaviour of the spy so that it returns the booking request from the "given" section.
+
+To do that, we need to use something similar to the when/thenReturn pattern. But for spies, we actually go the other way around, and we write the following:
+
+	doReturn(bookingRequest).when(bookingDAOMock).get(bookingId);
+
+Summary:
+
+	mocks: when(mock.method()).thenReturn()
+	spies: doReturn().when(spy).method())
+	
+For above, we want to return the bookingRequest when the bookingDAOMock, which is actuall now a spy, uses the method get() with the bookingID we entered as a parameter.
+
+Now, even though we do have a spy, which has the actual implementation of the bookingDAO class, we slightly modified it's behaviour for this particular method and this particular input.
+
+And now, if we run the test. It passes.
+
+So to sum up, a spy is a "partial mock". You can still modify it's behaviour, make it return the values that you want, but by default, it uses the code from the actual class.
+
+	mock (partial mock) = a real object with real methods that we can modify.
+
 
 
 Mocking Void Methods
 ---------------------
+Create new test class "Test09MockingVoidMethods".
 
+For method below, we wish to throw exception for the "mailSender" part:
 
+	public String makeBooking(BookingRequest bookingRequest) {
+		String roomId = roomService.findAvailableRoomId(bookingRequest);
+		double price = calculatePrice(bookingRequest);
 
+		if (bookingRequest.isPrepaid()) {
+			paymentService.pay(bookingRequest, price);
+		}
 
+		bookingRequest.setRoomId(roomId);
+		String bookingId = bookingDAO.save(bookingRequest);
+		roomService.bookRoom(roomId);
+		mailSender.sendBookingConfirmation(bookingId); // <-
+		return bookingId;
+	}
+	
+Can't use "when" method to test sendBookingConfirmation method throws an exception as it is void.
 
+For void methods we need to use "doThrow()"
 
+	@Test
+    void should_ThrowException_When_MailNotReady() {
 
+        // given
+        BookingRequest bookingRequest = new BookingRequest("1", LocalDate.of(2020, 01, 01),
+                LocalDate.of(2020, 01, 05), 2, false);
+        doThrow(new BusinessException()).when(mailSenderMock).sendBookingConfirmation(any());
+
+        // when
+        Executable executable = () -> bookingService.makeBooking(bookingRequest);
+
+        // then
+        assertThrows(BusinessException.class, executable);
+    }
+	
+Above passes. Similar pattern for checking if a void method does not throw an exception.
+
+	@Test
+    void should_NotThrowException_When_MailNotReady() {
+
+        // given
+        BookingRequest bookingRequest = new BookingRequest("1", LocalDate.of(2020, 01, 01),
+                LocalDate.of(2020, 01, 05), 2, false);
+        doNothing().when(mailSenderMock).sendBookingConfirmation(any());
+
+        // when
+        bookingService.makeBooking(bookingRequest);
+
+        // then
+        // no exception thrown
+    }
+
+To sum up. If you want to throw an exception from a void method, use doThrow().when() pattern. Can make sure a void method doesn't do anything with doNothing().
+
+doNothing() is actually the default behaviour for a void method so you could actually uncomment that line.
